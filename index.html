@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>場合の数ライブ！</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800;900&display=swap');
+
+/* ═══════════ TOKENS ═══════════ */
+:root {
+  --bg:       #0d0d1f;
+  --surface:  rgba(255,255,255,0.045);
+  --border:   rgba(255,255,255,0.09);
+  --accent:   #FFD93D;
+  --green:    #6BCB77;
+  --red:      #FF6B6B;
+  --blue:     #4D96FF;
+  --purple:   #C084FC;
+  --text:     #F0F0F8;
+  --muted:    rgba(240,240,248,0.4);
+  --r:        18px;
+  --rs:       12px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow-x:hidden}
+body{
+  font-family:'M PLUS Rounded 1c',sans-serif;
+  background:var(--bg);color:var(--text);
+  background-image:
+    radial-gradient(ellipse at 10% 30%,rgba(99,50,210,0.2) 0%,transparent 55%),
+    radial-gradient(ellipse at 90% 15%,rgba(30,90,220,0.15) 0%,transparent 50%),
+    radial-gradient(ellipse at 55% 95%,rgba(200,50,120,0.1) 0%,transparent 50%);
+}
+
+/* ═══════════ STARS ═══════════ */
+#stars{position:fixed;inset:0;pointer-events:none;z-index:0}
+.star{position:absolute;border-radius:50%;background:#fff;animation:twinkle linear infinite}
+@keyframes twinkle{0%,100%{opacity:.1}50%{opacity:.85}}
+
+/* ═══════════ SCREENS ═══════════ */
+.scr{display:none;position:relative;z-index:10;padding:16px;max-width:820px;margin:0 auto;padding-bottom:40px}
+.scr.on{display:block;animation:fadeUp .45s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* ═══════════ ROLE PICKER ═══════════ */
+.role-hero{text-align:center;padding:48px 0 32px}
+.role-hero .logo{font-size:3rem;display:block;animation:bounce 2s infinite}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.role-hero h1{
+  font-size:2rem;font-weight:900;margin-top:12px;
+  background:linear-gradient(135deg,#FFD93D,#FF6B6B,#4D96FF);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.role-hero p{color:var(--muted);font-size:.9rem;margin-top:8px}
+.role-cards{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:28px}
+.role-card{
+  border-radius:20px;padding:28px 16px;text-align:center;cursor:pointer;
+  border:2px solid var(--border);background:var(--surface);
+  transition:all .25s cubic-bezier(.34,1.56,.64,1)}
+.role-card:hover,.role-card:active{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,0.4)}
+.role-card.teacher{border-color:rgba(255,217,61,0.5);background:rgba(255,217,61,0.07)}
+.role-card.student{border-color:rgba(77,150,255,0.5);background:rgba(77,150,255,0.07)}
+.role-card .rc-emoji{font-size:2.8rem;display:block;margin-bottom:10px}
+.role-card .rc-title{font-size:1.1rem;font-weight:900;margin-bottom:4px}
+.role-card.teacher .rc-title{color:var(--accent)}
+.role-card.student .rc-title{color:var(--blue)}
+.role-card .rc-desc{font-size:.78rem;color:var(--muted);font-weight:700}
+
+/* ═══════════ SHARED COMPONENTS ═══════════ */
+.card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);padding:20px;margin-bottom:14px}
+.label{font-size:.7rem;font-weight:800;letter-spacing:.1em;
+  color:var(--muted);text-transform:uppercase;margin-bottom:8px}
+.btn{
+  border:none;border-radius:var(--rs);padding:13px 22px;
+  font-family:inherit;font-weight:900;font-size:.95rem;
+  cursor:pointer;transition:all .2s;display:inline-flex;
+  align-items:center;justify-content:center;gap:8px}
+.btn:active{transform:scale(.96)}
+.btn-gold{background:linear-gradient(135deg,#FFD700,#FFA500);color:#1a1a1a;
+  box-shadow:0 6px 24px rgba(255,180,0,.3)}
+.btn-blue{background:linear-gradient(135deg,#4D96FF,#2563EB);color:#fff;
+  box-shadow:0 6px 24px rgba(77,150,255,.3)}
+.btn-red{background:rgba(255,107,107,.15);border:2px solid var(--red);color:var(--red)}
+.btn-outline{background:var(--surface);border:2px solid var(--border);color:var(--text)}
+.btn-full{width:100%}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.chip{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 12px;border-radius:99px;font-size:.8rem;font-weight:800;
+  background:rgba(255,255,255,.07);border:1.5px solid var(--border)}
+
+/* ═══════════ TEACHER – SETUP ═══════════ */
+.q-selector{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.q-row{
+  display:flex;align-items:center;gap:12px;padding:12px 16px;
+  border-radius:14px;border:2px solid var(--border);background:var(--surface);
+  cursor:pointer;transition:border-color .2s}
+.q-row.sel{border-color:var(--accent);background:rgba(255,217,61,.07)}
+.q-row .q-num{
+  width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,.08);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.8rem;font-weight:900;flex-shrink:0}
+.q-row.sel .q-num{background:var(--accent);color:#222}
+.q-row .q-preview{font-size:.82rem;font-weight:700;color:var(--muted);flex:1;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.q-row.sel .q-preview{color:var(--text)}
+
+/* ═══════════ TEACHER – LIVE ═══════════ */
+.t-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;margin-bottom:14px}
+.t-header .phase-pill{
+  padding:4px 14px;border-radius:99px;font-size:.75rem;font-weight:900;
+  letter-spacing:.05em}
+.phase-pill.waiting{background:rgba(255,217,61,.15);color:var(--accent)}
+.phase-pill.open{background:rgba(107,203,119,.15);color:var(--green);
+  animation:pulse 1.5s infinite}
+.phase-pill.reveal{background:rgba(77,150,255,.15);color:var(--blue)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.t-header .resp-count{font-size:1.4rem;font-weight:900;color:var(--green)}
+.t-header .resp-label{font-size:.72rem;color:var(--muted);font-weight:800}
+
+.q-display-box{
+  background:rgba(255,255,255,.03);border:1px solid var(--border);
+  border-radius:var(--r);padding:20px;text-align:center;margin-bottom:14px}
+.q-display-text{font-size:1.05rem;font-weight:800;line-height:1.75;margin-bottom:12px}
+.q-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.q-chip-item{
+  padding:7px 16px;border-radius:99px;font-weight:900;font-size:1rem;
+  background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.14)}
+
+/* Bar chart */
+.bar-chart{margin-bottom:14px}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.bar-label{font-size:.88rem;font-weight:900;width:52px;text-align:right;flex-shrink:0}
+.bar-track{flex:1;height:32px;background:rgba(255,255,255,.06);
+  border-radius:8px;overflow:hidden;position:relative}
+.bar-fill{
+  height:100%;border-radius:8px;
+  transition:width .6s cubic-bezier(.34,1.56,.64,1);
+  display:flex;align-items:center;justify-content:flex-end;padding-right:8px}
+.bar-fill.is-answer{background:linear-gradient(90deg,var(--green),#4ade80)}
+.bar-fill.not-answer{background:rgba(255,255,255,.12)}
+.bar-fill.revealed.is-answer{box-shadow:0 0 20px rgba(107,203,119,.5)}
+.bar-count{font-size:.8rem;font-weight:900;color:#fff;min-width:16px}
+.bar-pct{font-size:.72rem;color:var(--muted);font-weight:800;width:36px;text-align:right}
+
+/* result stats */
+.stat-row{display:flex;gap:10px;margin-bottom:14px}
+.stat-card{
+  flex:1;border-radius:14px;padding:14px 12px;text-align:center;
+  background:var(--surface);border:1px solid var(--border)}
+.stat-card .sv{font-size:2.2rem;font-weight:900}
+.stat-card .sl{font-size:.72rem;font-weight:800;color:var(--muted);margin-top:2px}
+.stat-card.correct-stat{border-color:var(--green);background:rgba(107,203,119,.08)}
+.stat-card.correct-stat .sv{color:var(--green)}
+.stat-card.wrong-stat{border-color:var(--red);background:rgba(255,107,107,.08)}
+.stat-card.wrong-stat .sv{color:var(--red)}
+
+/* ═══════════ STUDENT ═══════════ */
+.s-waiting{text-align:center;padding:60px 20px}
+.s-waiting .w-emoji{font-size:4rem;display:block;animation:bounce 2s infinite;margin-bottom:16px}
+.s-waiting h2{font-size:1.3rem;font-weight:900;margin-bottom:8px}
+.s-waiting p{color:var(--muted);font-size:.88rem;line-height:1.6}
+.s-question-box{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);padding:20px;margin-bottom:16px;text-align:center}
+.s-question-text{font-size:1.05rem;font-weight:800;line-height:1.75;margin-bottom:12px}
+
+/* numpad */
+.numpad-display{
+  text-align:center;font-size:3.5rem;font-weight:900;
+  padding:10px 0 14px;min-height:72px;letter-spacing:.05em}
+.numpad-display.empty{color:rgba(255,255,255,.2)}
+.numpad-display span{display:inline-block;animation:popIn .2s cubic-bezier(.34,1.56,.64,1)}
+@keyframes popIn{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.np{
+  height:64px;border-radius:14px;border:none;
+  background:rgba(255,255,255,.07);color:#fff;
+  font-family:inherit;font-size:1.4rem;font-weight:900;
+  cursor:pointer;transition:all .14s;touch-action:manipulation}
+.np:active{background:rgba(255,255,255,.2);transform:scale(.92)}
+.np.del{background:rgba(255,107,107,.12);color:var(--red)}
+.np.zero{grid-column:span 2}
+
+.name-input{
+  width:100%;background:rgba(255,255,255,.06);
+  border:2px solid var(--border);border-radius:14px;
+  padding:13px 16px;color:#fff;font-family:inherit;
+  font-size:1rem;font-weight:800;outline:none;
+  transition:border-color .2s;margin-bottom:10px}
+.name-input:focus{border-color:var(--blue)}
+.name-input::placeholder{color:rgba(255,255,255,.25)}
+
+/* submitted state */
+.submitted-box{
+  text-align:center;padding:36px 20px;
+  background:rgba(107,203,119,.08);border:2px solid var(--green);
+  border-radius:var(--r);margin-bottom:14px}
+.submitted-box .sb-emoji{font-size:3rem;display:block;margin-bottom:10px}
+.submitted-box .sb-val{font-size:2.5rem;font-weight:900;color:var(--green);margin-bottom:4px}
+.submitted-box .sb-name{font-size:.9rem;font-weight:800;color:var(--muted)}
+.submitted-box .sb-msg{font-size:.88rem;font-weight:700;color:var(--muted);margin-top:10px;line-height:1.6}
+
+/* answer reveal for student */
+.s-reveal-box{
+  text-align:center;padding:24px 20px;
+  border-radius:var(--r);margin-bottom:14px}
+.s-reveal-box.correct{background:rgba(107,203,119,.12);border:2px solid var(--green)}
+.s-reveal-box.wrong{background:rgba(255,107,107,.08);border:2px solid rgba(255,107,107,.3)}
+.s-reveal-box .sr-emoji{font-size:3.5rem;margin-bottom:8px}
+.s-reveal-box .sr-ans{font-size:3rem;font-weight:900;margin:4px 0}
+.s-reveal-box.correct .sr-ans{color:var(--green)}
+.s-reveal-box.wrong .sr-ans{color:var(--red)}
+.s-reveal-box .sr-reason{font-size:.85rem;font-weight:700;color:var(--muted);
+  line-height:1.7;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08)}
+
+/* ═══════════ CONFETTI ═══════════ */
+.cf-wrap{position:fixed;inset:0;pointer-events:none;z-index:200}
+.cf{position:absolute;border-radius:3px;animation:cfFall linear forwards}
+@keyframes cfFall{from{transform:translateY(-10px) rotate(0deg);opacity:1}
+  to{transform:translateY(110vh) rotate(720deg);opacity:0}}
+
+/* ═══════════ TOAST ═══════════ */
+.toast{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:rgba(20,20,50,.95);border:1.5px solid rgba(255,255,255,.15);
+  backdrop-filter:blur(12px);border-radius:14px;padding:11px 22px;
+  font-weight:800;font-size:.88rem;z-index:300;white-space:nowrap;
+  transition:transform .4s cubic-bezier(.34,1.56,.64,1)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ═══════════ SYNC DOT ═══════════ */
+.sync-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--green);display:inline-block;
+  animation:pulse 1.5s infinite;margin-right:6px}
+
+/* section divider */
+.sec-title{
+  display:flex;align-items:center;gap:8px;
+  font-size:.7rem;font-weight:800;letter-spacing:.1em;
+  color:var(--muted);text-transform:uppercase;margin-bottom:10px}
+.sec-line{flex:1;height:1px;background:var(--border)}
+</style>
+</head>
+<body>
+
+<div id="stars"></div>
+<div class="cf-wrap" id="cf-wrap"></div>
+<div class="toast" id="toast"></div>
+
+<!-- ══════════════════════════════════════
+     ROLE PICKER
+══════════════════════════════════════ -->
+<div class="scr on" id="scr-role">
+  <div class="role-hero">
+    <span class="logo">🎲</span>
+    <h1>場合の数ライブ！</h1>
+    <p>みんなでリアルタイムに予想しよう</p>
+  </div>
+  <div class="role-cards">
+    <div class="role-card teacher" onclick="selectRole('teacher')">
+      <span class="rc-emoji">👩‍🏫</span>
+      <div class="rc-title">先生</div>
+      <div class="rc-desc">問題を出す・<br>答えを管理する</div>
+    </div>
+    <div class="role-card student" onclick="selectRole('student')">
+      <span class="rc-emoji">🧒</span>
+      <div class="rc-title">子ども</div>
+      <div class="rc-desc">予想を入力して<br>送信する</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TEACHER – SETUP
+══════════════════════════════════════ -->
+<div class="scr" id="scr-t-setup">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+    <div>
+      <div style="font-size:1.4rem;font-weight:900">👩‍🏫 先生パネル</div>
+      <div style="font-size:.78rem;color:var(--muted);font-weight:700;margin-top:2px">問題を選んでスタートしよう</div>
+    </div>
+    <button class="btn btn-outline" style="padding:8px 14px;font-size:.8rem" onclick="selectRole(null)">← もどる</button>
+  </div>
+
+  <div class="label">問題を選ぶ（複数選択可）</div>
+  <div class="q-selector" id="q-selector"></div>
+
+  <button class="btn btn-gold btn-full" onclick="teacherStart()" style="margin-top:6px">
+    ⚡ 授業をスタート！
+  </button>
+</div>
+
+<!-- ══════════════════════════════════════
+     TEACHER – LIVE
+══════════════════════════════════════ -->
+<div class="scr" id="scr-t-live">
+
+  <div class="t-header">
+    <div>
+      <div style="font-size:.72rem;font-weight:800;color:var(--muted)" id="t-q-label">だい1もん</div>
+      <div style="font-size:1rem;font-weight:900;margin-top:2px">
+        <span class="sync-dot"></span>ライブ中
+      </div>
+    </div>
+    <div style="text-align:center">
+      <div class="resp-count" id="t-resp-count">0</div>
+      <div class="resp-label">人が回答済み</div>
+    </div>
+    <div class="phase-pill waiting" id="t-phase-pill">待機中</div>
+  </div>
+
+  <div class="q-display-box">
+    <div class="q-display-text" id="t-q-text"></div>
+    <div class="q-chips" id="t-q-chips"></div>
+  </div>
+
+  <!-- bar chart -->
+  <div class="label">リアルタイム予想分布</div>
+  <div class="bar-chart" id="bar-chart"></div>
+
+  <!-- stats (hidden until reveal) -->
+  <div id="t-stats" style="display:none">
+    <div class="stat-row" id="stat-row"></div>
+    <div class="label">正解の理由</div>
+    <div class="card" style="font-size:.88rem;font-weight:700;line-height:1.75;color:rgba(255,255,255,.8)" id="t-reason"></div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-outline" id="t-prev-btn" onclick="teacherPrev()">← 前の問題</button>
+    <button class="btn btn-gold" id="t-reveal-btn" onclick="teacherReveal()" style="flex:2">
+      🔓 こたえを見せる
+    </button>
+    <button class="btn btn-blue" id="t-next-btn" onclick="teacherNext()" style="display:none;flex:2">
+      つぎの問題 →
+    </button>
+  </div>
+  <div style="margin-top:10px">
+    <button class="btn btn-red btn-full" style="font-size:.8rem;padding:10px" onclick="teacherEnd()">
+      🏁 授業を終わる
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     STUDENT – MAIN
+══════════════════════════════════════ -->
+<div class="scr" id="scr-student">
+
+  <!-- waiting -->
+  <div id="s-waiting">
+    <div class="s-waiting">
+      <span class="w-emoji">⏳</span>
+      <h2>先生が問題を出すのを<br>まっているよ！</h2>
+      <p>準備ができたら画面が切りかわるよ</p>
+    </div>
+    <div class="card" style="text-align:center">
+      <div class="label">あなたの名前</div>
+      <input class="name-input" id="s-name-input" type="text" placeholder="名前を入力してね" maxlength="12">
+      <div style="font-size:.78rem;color:var(--muted);font-weight:700">名前は後から変えられないよ</div>
+    </div>
+  </div>
+
+  <!-- question active -->
+  <div id="s-question" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-size:.78rem;font-weight:800;color:var(--muted)" id="s-q-label">だい1もん</div>
+      <div class="chip" style="color:var(--green);border-color:rgba(107,203,119,.4)">
+        <span class="sync-dot"></span>受付中
+      </div>
+    </div>
+    <div class="s-question-box">
+      <div class="s-question-text" id="s-q-text"></div>
+      <div class="q-chips" id="s-q-chips"></div>
+    </div>
+    <!-- input -->
+    <div id="s-input-area">
+      <div class="label">何通り？ 予想して送信しよう</div>
+      <div class="card">
+        <div class="numpad-display empty" id="s-display">？</div>
+        <div class="numpad" id="s-numpad"></div>
+        <button class="btn btn-blue btn-full" onclick="studentSubmit()">📤 予想を送信！</button>
+      </div>
+    </div>
+    <!-- submitted -->
+    <div id="s-submitted" style="display:none">
+      <div class="submitted-box">
+        <span class="sb-emoji">✅</span>
+        <div class="sb-val" id="s-submitted-val"></div>
+        <div class="sb-name" id="s-submitted-name"></div>
+        <div class="sb-msg">先生が答えを見せるまでまっていてね！<br>ほかの人は何と答えるかな？</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- reveal -->
+  <div id="s-reveal" style="display:none">
+    <div style="font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:10px" id="s-r-label">だい1もん こたえ</div>
+    <div class="s-reveal-box" id="s-reveal-box">
+      <div class="sr-emoji" id="s-reveal-emoji"></div>
+      <div style="font-size:.8rem;font-weight:800;color:var(--muted);margin-bottom:4px">せいかいは</div>
+      <div class="sr-ans" id="s-reveal-ans"></div>
+      <div style="font-size:.88rem;font-weight:700;color:var(--muted)" id="s-reveal-unit"></div>
+      <div class="sr-reason" id="s-reveal-reason"></div>
+    </div>
+    <div id="s-waiting-next" style="text-align:center;color:var(--muted);font-size:.85rem;font-weight:700;padding:12px">
+      ⏳ 先生がつぎの問題に進むのをまっているよ…
+    </div>
+  </div>
+
+  <!-- session ended -->
+  <div id="s-ended" style="display:none">
+    <div class="s-waiting">
+      <span class="w-emoji">🎊</span>
+      <h2>授業おつかれさま！</h2>
+      <p>今日学んだことをふり返ってみよう。<br>場合を順序よく整理すると<br>落ちや重なりなく調べられるね！</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// QUESTIONS BANK
+// ══════════════════════════════════════════════════════════
+const QUESTIONS = [
+  {
+    id:'q1',
+    text:'Ａ・Ｂ・Ｃ・Ｄ の4チームでリーグせんをします。\n2チームずつのしあいはぜんぶで何しあい？',
+    chips:['Ａ','Ｂ','Ｃ','Ｄ'],
+    answer:6, unit:'しあい',
+    reason:'表で整理すると…\nＡ×Ｂ、Ａ×Ｃ、Ａ×Ｄ、Ｂ×Ｃ、Ｂ×Ｄ、Ｃ×Ｄ\n→ 4×3÷2 ＝ 6しあい！\n落ちや重なりがないか表で確認できるね。',
+  },
+  {
+    id:'q2',
+    text:'太・花・健・美 の4人から2人を選んで\n「1番目」と「2番目」を決めます。\n何通りのならべ方がある？',
+    chips:['太','花','健','美'],
+    answer:12, unit:'通り',
+    reason:'樹形図で整理すると…\n1番目が4通り × 2番目が3通り\n→ 4×3 ＝ 12通り！\n樹形図を使うと落ちなく数えられるよ。',
+  },
+  {
+    id:'q3',
+    text:'赤・青・黄・緑 の4色から3色を選んで\nならべます。何通りある？',
+    chips:['赤','青','黄','緑'],
+    answer:24, unit:'通り',
+    reason:'1番目4通り × 2番目3通り × 3番目2通り\n→ 4×3×2 ＝ 24通り！',
+  },
+  {
+    id:'q4',
+    text:'１・２・３・４ の4まいのカードから\n2まいを選んで2けたの数をつくります。\n何通りできる？',
+    chips:['１','２','３','４'],
+    answer:12, unit:'通り',
+    reason:'十の位4通り × 一の位3通り\n→ 4×3 ＝ 12通り！',
+  },
+  {
+    id:'q5',
+    text:'Ａ・Ｂ・Ｃ・Ｄ・Ｅ の5チームで\nリーグせんをします。\nぜんぶで何しあい？',
+    chips:['Ａ','Ｂ','Ｃ','Ｄ','Ｅ'],
+    answer:10, unit:'しあい',
+    reason:'5×4÷2 ＝ 10しあい！\n（同じチームどうし・順番が同じしあいは数えない）',
+  },
+  {
+    id:'q6',
+    text:'さいころを2回なげます。\n出た目の合計が7になる組み合わせは何通り？',
+    chips:['🎲','🎲'],
+    answer:6, unit:'通り',
+    reason:'(1,6)(2,5)(3,4)(4,3)(5,2)(6,1)\n→ 6通り！表で整理すると見やすいよ。',
+  },
+  {
+    id:'q7',
+    text:'4人でリレーをします。\n走る順番は全部で何通りある？',
+    chips:['1走','2走','3走','4走'],
+    answer:24, unit:'通り',
+    reason:'4×3×2×1 ＝ 24通り！\n（4の階乗というよ）',
+  },
+];
+
+// ══════════════════════════════════════════════════════════
+// STORAGE KEYS  (shared=true → sync across tabs/devices)
+// ══════════════════════════════════════════════════════════
+const KEY_SESSION = 'sansu_live_session';
+const KEY_ANSWERS = 'sansu_live_answers';
+
+// ══════════════════════════════════════════════════════════
+// LOCAL STATE
+// ══════════════════════════════════════════════════════════
+let role = null;           // 'teacher' | 'student'
+let pollTimer = null;
+let studentInput = '';
+let studentName = '';
+let studentSubmitted = false;
+let lastSessionStr = '';
+let lastAnswersStr = '';
+let teacherSelectedQIds = [];
+
+// ══════════════════════════════════════════════════════════
+// STARS
+// ══════════════════════════════════════════════════════════
+(()=>{
+  const w = document.getElementById('stars');
+  for(let i=0;i<80;i++){
+    const s=document.createElement('div'); s.className='star';
+    const sz=0.8+Math.random()*2.4;
+    s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;animation-duration:${2+Math.random()*5}s;animation-delay:${Math.random()*5}s`;
+    w.appendChild(s);
+  }
+})();
+
+// ══════════════════════════════════════════════════════════
+// SCREEN ROUTER
+// ══════════════════════════════════════════════════════════
+function showScr(id){
+  document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  window.scrollTo(0,0);
+}
+
+// ══════════════════════════════════════════════════════════
+// ROLE SELECTION
+// ══════════════════════════════════════════════════════════
+function selectRole(r){
+  role = r;
+  if(!r){ showScr('scr-role'); stopPoll(); return; }
+  if(r==='teacher'){
+    buildQSelector();
+    showScr('scr-t-setup');
+  } else {
+    showScr('scr-student');
+    startPoll();
+    studentSubmitted = false;
+    studentInput = '';
+    buildNumpad();
+    resetStudentUI();
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// TEACHER – SETUP
+// ══════════════════════════════════════════════════════════
+function buildQSelector(){
+  const wrap = document.getElementById('q-selector');
+  teacherSelectedQIds = [QUESTIONS[0].id, QUESTIONS[1].id]; // default first 2
+  wrap.innerHTML = QUESTIONS.map((q,i)=>`
+    <div class="q-row ${teacherSelectedQIds.includes(q.id)?'sel':''}"
+      id="qrow-${q.id}" onclick="toggleQ('${q.id}')">
+      <div class="q-num">${i+1}</div>
+      <div class="q-preview">${q.text.split('\n')[0]}</div>
+    </div>`).join('');
+}
+
+function toggleQ(id){
+  if(teacherSelectedQIds.includes(id)){
+    if(teacherSelectedQIds.length<=1){showToast('最低1問は選んでね！');return;}
+    teacherSelectedQIds = teacherSelectedQIds.filter(x=>x!==id);
+  } else {
+    teacherSelectedQIds.push(id);
+  }
+  document.querySelectorAll('.q-row').forEach(r=>{
+    const qid = r.id.replace('qrow-','');
+    r.classList.toggle('sel', teacherSelectedQIds.includes(qid));
+    r.querySelector('.q-num').style.background = teacherSelectedQIds.includes(qid)?'var(--accent)':'';
+    r.querySelector('.q-num').style.color = teacherSelectedQIds.includes(qid)?'#222':'';
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+// TEACHER – START SESSION
+// ══════════════════════════════════════════════════════════
+async function teacherStart(){
+  const orderedQs = QUESTIONS.filter(q=>teacherSelectedQIds.includes(q.id));
+  const session = {
+    phase: 'open',          // 'open' | 'reveal' | 'ended'
+    qIndex: 0,
+    questions: orderedQs,
+    startedAt: Date.now(),
+  };
+  await storage_set(KEY_SESSION, session, true);
+  await storage_set(KEY_ANSWERS, {}, true);
+  renderTeacherLive(session, {});
+  showScr('scr-t-live');
+  startPoll();
+}
+
+// ══════════════════════════════════════════════════════════
+// TEACHER – CONTROLS
+// ══════════════════════════════════════════════════════════
+async function teacherReveal(){
+  const session = await storage_get(KEY_SESSION, true);
+  if(!session) return;
+  session.phase = 'reveal';
+  await storage_set(KEY_SESSION, session, true);
+  const answers = await storage_get(KEY_ANSWERS, true) || {};
+  renderTeacherLive(session, answers);
+  confetti();
+}
+
+async function teacherNext(){
+  const session = await storage_get(KEY_SESSION, true);
+  if(!session) return;
+  session.qIndex++;
+  session.phase = 'open';
+  await storage_set(KEY_SESSION, session, true);
+  await storage_set(KEY_ANSWERS, {}, true);
+  renderTeacherLive(session, {});
+}
+
+async function teacherPrev(){
+  const session = await storage_get(KEY_SESSION, true);
+  if(!session) return;
+  if(session.qIndex<=0){showToast('最初の問題だよ！');return;}
+  session.qIndex--;
+  session.phase = 'open';
+  await storage_set(KEY_SESSION, session, true);
+  await storage_set(KEY_ANSWERS, {}, true);
+  renderTeacherLive(session, {});
+}
+
+async function teacherEnd(){
+  if(!confirm('授業を終わりますか？')) return;
+  const session = await storage_get(KEY_SESSION, true);
+  if(!session) return;
+  session.phase = 'ended';
+  await storage_set(KEY_SESSION, session, true);
+  stopPoll();
+  showScr('scr-t-setup');
+}
+
+// ══════════════════════════════════════════════════════════
+// TEACHER – RENDER LIVE
+// ══════════════════════════════════════════════════════════
+function renderTeacherLive(session, answers){
+  if(!session) return;
+  const q = session.questions[session.qIndex];
+  if(!q) return;
+  const phase = session.phase;
+  const totalQ = session.questions.length;
+  const qNum = session.qIndex + 1;
+
+  document.getElementById('t-q-label').textContent = `だい ${qNum} もん（全${totalQ}問）`;
+  document.getElementById('t-q-text').textContent = q.text;
+  document.getElementById('t-q-chips').innerHTML = q.chips.map(c=>`<div class="q-chip-item">${c}</div>`).join('');
+
+  // phase pill
+  const pill = document.getElementById('t-phase-pill');
+  if(phase==='open'){pill.textContent='受付中';pill.className='phase-pill open';}
+  else if(phase==='reveal'){pill.textContent='答え公開中';pill.className='phase-pill reveal';}
+  else{pill.textContent='待機中';pill.className='phase-pill waiting';}
+
+  // response count
+  const respKeys = Object.keys(answers);
+  document.getElementById('t-resp-count').textContent = respKeys.length;
+
+  // bar chart
+  renderBarChart(answers, q, phase==='reveal');
+
+  // stats + reason
+  const statsEl = document.getElementById('t-stats');
+  if(phase==='reveal'){
+    statsEl.style.display='block';
+    const correctCount = respKeys.filter(k=>parseInt(answers[k])===q.answer).length;
+    const wrongCount = respKeys.length - correctCount;
+    document.getElementById('stat-row').innerHTML=`
+      <div class="stat-card correct-stat">
+        <div class="sv">${correctCount}</div>
+        <div class="sl">せいかい 🎯</div>
+      </div>
+      <div class="stat-card wrong-stat">
+        <div class="sv">${wrongCount}</div>
+        <div class="sl">ちがう 😅</div>
+      </div>
+      <div class="stat-card">
+        <div class="sv">${respKeys.length > 0 ? Math.round(correctCount/respKeys.length*100) : 0}%</div>
+        <div class="sl">正解率</div>
+      </div>`;
+    document.getElementById('t-reason').textContent = q.reason;
+  } else {
+    statsEl.style.display='none';
+  }
+
+  // buttons
+  document.getElementById('t-prev-btn').style.display = session.qIndex>0 ? '' : 'none';
+  const isLast = session.qIndex >= session.questions.length-1;
+  if(phase==='reveal'){
+    document.getElementById('t-reveal-btn').style.display='none';
+    document.getElementById('t-next-btn').style.display = isLast ? 'none' : '';
+    document.getElementById('t-next-btn').textContent = 'つぎの問題 →';
+  } else {
+    document.getElementById('t-reveal-btn').style.display='';
+    document.getElementById('t-next-btn').style.display='none';
+  }
+}
+
+function renderBarChart(answers, q, revealed){
+  const vals = Object.values(answers).map(v=>parseInt(v)).filter(v=>!isNaN(v));
+  // collect unique values + always include correct answer
+  const uniqSet = new Set([...vals, q.answer]);
+  const sorted = [...uniqSet].sort((a,b)=>a-b);
+  const maxCount = Math.max(1, ...sorted.map(v=>vals.filter(x=>x===v).length));
+
+  const chart = document.getElementById('bar-chart');
+  if(vals.length===0){
+    chart.innerHTML=`<div style="text-align:center;padding:20px;color:var(--muted);font-size:.85rem;font-weight:700">まだ誰も回答していないよ…</div>`;
+    return;
+  }
+  chart.innerHTML = sorted.map(v=>{
+    const cnt = vals.filter(x=>x===v).length;
+    const pct = Math.round(cnt/vals.length*100);
+    const barW = Math.round(cnt/maxCount*100);
+    const isAns = v===q.answer;
+    const revealClass = revealed ? (isAns ? 'revealed is-answer':'') : (isAns?'is-answer':'not-answer');
+    return `<div class="bar-row">
+      <div class="bar-label">${v}<span style="font-size:.6rem;opacity:.6">${q.unit}</span></div>
+      <div class="bar-track">
+        <div class="bar-fill ${isAns?'is-answer':'not-answer'} ${revealed&&isAns?'revealed':''}"
+          style="width:${barW}%">
+          <span class="bar-count">${cnt}</span>
+        </div>
+      </div>
+      <div class="bar-pct">${pct}%</div>
+      ${revealed&&isAns?'<div style="font-size:.85rem">✅</div>':'<div style="width:20px"></div>'}
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════
+// STUDENT – NUMPAD
+// ══════════════════════════════════════════════════════════
+function buildNumpad(){
+  const pad = document.getElementById('s-numpad');
+  const keys=['7','8','9','4','5','6','1','2','3','del','0',''];
+  pad.innerHTML = keys.map(k=>{
+    if(k==='') return '';
+    if(k==='del') return`<button class="np del" onclick="npKey('del')">⌫</button>`;
+    if(k==='0') return`<button class="np zero" onclick="npKey('0')">0</button>`;
+    return`<button class="np" onclick="npKey('${k}')">${k}</button>`;
+  }).join('');
+}
+
+function npKey(k){
+  if(k==='del') studentInput = studentInput.slice(0,-1);
+  else { if(studentInput.length>=4) return; studentInput += k; }
+  const d = document.getElementById('s-display');
+  d.className = 'numpad-display' + (studentInput?'':' empty');
+  d.innerHTML = studentInput
+    ? studentInput.split('').map(c=>`<span>${c}</span>`).join('')
+    : '？';
+}
+
+// ══════════════════════════════════════════════════════════
+// STUDENT – SUBMIT
+// ══════════════════════════════════════════════════════════
+async function studentSubmit(){
+  if(!studentInput){ showToast('数字を入れてね！'); return; }
+  const name = document.getElementById('s-name-input')?.value.trim() || studentName || '名無しさん';
+  studentName = name;
+  const key = name + '_' + Date.now();
+
+  // Save to shared answers
+  let answers = await storage_get(KEY_ANSWERS, true) || {};
+  // Use name as key (overwrite if same name submits again)
+  answers[name] = studentInput;
+  await storage_set(KEY_ANSWERS, answers, true);
+
+  studentSubmitted = true;
+  document.getElementById('s-input-area').style.display='none';
+  document.getElementById('s-submitted').style.display='block';
+  document.getElementById('s-submitted-val').textContent = studentInput + ' 通り';
+  document.getElementById('s-submitted-name').textContent = name + ' さんの予想';
+  showToast('送信したよ！');
+}
+
+// ══════════════════════════════════════════════════════════
+// STUDENT – RESET PER QUESTION
+// ══════════════════════════════════════════════════════════
+function resetStudentUI(){
+  studentSubmitted = false;
+  studentInput = '';
+  const d = document.getElementById('s-display');
+  if(d){ d.className='numpad-display empty'; d.textContent='？'; }
+  const ia = document.getElementById('s-input-area');
+  const sb = document.getElementById('s-submitted');
+  if(ia) ia.style.display='block';
+  if(sb) sb.style.display='none';
+}
+
+// ══════════════════════════════════════════════════════════
+// POLLING – sync state every 1.5s
+// ══════════════════════════════════════════════════════════
+function startPoll(){ stopPoll(); pollTimer = setInterval(poll, 1500); poll(); }
+function stopPoll(){ clearInterval(pollTimer); pollTimer=null; }
+
+let lastQIndex = -1;
+let lastPhase = '';
+
+async function poll(){
+  try {
+    const session = await storage_get(KEY_SESSION, true);
+    const answers = await storage_get(KEY_ANSWERS, true) || {};
+
+    if(!session) return;
+
+    const sessionStr = JSON.stringify({qi:session.qIndex, ph:session.phase});
+    const answersStr = JSON.stringify(answers);
+
+    if(role==='teacher'){
+      // always re-render on change
+      if(sessionStr !== lastSessionStr || answersStr !== lastAnswersStr){
+        renderTeacherLive(session, answers);
+        lastSessionStr = sessionStr;
+        lastAnswersStr = answersStr;
+      }
+      return;
+    }
+
+    // student polling
+    if(session.phase==='ended'){
+      document.getElementById('s-waiting').style.display='none';
+      document.getElementById('s-question').style.display='none';
+      document.getElementById('s-reveal').style.display='none';
+      document.getElementById('s-ended').style.display='block';
+      stopPoll(); return;
+    }
+
+    const q = session.questions[session.qIndex];
+    if(!q) return;
+
+    // new question came
+    if(session.qIndex !== lastQIndex){
+      lastQIndex = session.qIndex;
+      resetStudentUI();
+      document.getElementById('s-waiting').style.display='none';
+      document.getElementById('s-question').style.display='block';
+      document.getElementById('s-reveal').style.display='none';
+      document.getElementById('s-q-label').textContent=`だい ${session.qIndex+1} もん`;
+      document.getElementById('s-q-text').textContent = q.text;
+      document.getElementById('s-q-chips').innerHTML = q.chips.map(c=>`<div class="q-chip-item">${c}</div>`).join('');
+    }
+
+    // phase change
+    if(session.phase !== lastPhase){
+      lastPhase = session.phase;
+
+      if(session.phase==='reveal'){
+        // show reveal
+        document.getElementById('s-question').style.display='block';
+        document.getElementById('s-reveal').style.display='block';
+        document.getElementById('s-r-label').textContent=`だい ${session.qIndex+1} もん こたえ`;
+
+        const myAns = parseInt(answers[studentName]);
+        const correct = myAns === q.answer;
+        const box = document.getElementById('s-reveal-box');
+        box.className = 's-reveal-box ' + (studentSubmitted ? (correct?'correct':'wrong') : '');
+        document.getElementById('s-reveal-emoji').textContent = !studentSubmitted ? '🤔' : correct ? '🎊' : '😅';
+        document.getElementById('s-reveal-ans').textContent = q.answer;
+        document.getElementById('s-reveal-unit').textContent = q.unit;
+        document.getElementById('s-reveal-reason').textContent = q.reason;
+
+        if(studentSubmitted && correct) confetti();
+      } else if(session.phase==='open'){
+        document.getElementById('s-reveal').style.display='none';
+      }
+    }
+
+    // if still waiting (no session started yet from teacher perspective)
+    if(session.phase==='open' && session.qIndex===lastQIndex){
+      // show question UI (already set above)
+    }
+  } catch(e){ /* storage error – ignore */ }
+}
+
+// ══════════════════════════════════════════════════════════
+// STORAGE WRAPPER
+// ══════════════════════════════════════════════════════════
+async function storage_set(key, value, shared){
+  try {
+    const result = await window.storage.set(key, JSON.stringify(value), shared);
+    return !!result;
+  } catch(e){ return false; }
+}
+
+async function storage_get(key, shared){
+  try {
+    const result = await window.storage.get(key, shared);
+    if(!result) return null;
+    return JSON.parse(result.value);
+  } catch(e){ return null; }
+}
+
+// ══════════════════════════════════════════════════════════
+// CONFETTI
+// ══════════════════════════════════════════════════════════
+function confetti(){
+  const w = document.getElementById('cf-wrap');
+  const cols=['#FFD93D','#FF6B6B','#6BCB77','#4D96FF','#fff','#C084FC'];
+  for(let i=0;i<70;i++){
+    const d=document.createElement('div'); d.className='cf';
+    const sz=7+Math.random()*9;
+    d.style.cssText=`left:${Math.random()*100}vw;width:${sz}px;height:${sz}px;
+      background:${cols[Math.floor(Math.random()*cols.length)]};
+      border-radius:${Math.random()>.5?'50%':'3px'};
+      animation-duration:${1.5+Math.random()*2.5}s;
+      animation-delay:${Math.random()*.6}s`;
+    w.appendChild(d);
+  }
+  setTimeout(()=>w.innerHTML='',5000);
+}
+
+// ══════════════════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════════════════
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._t);
+  t._t=setTimeout(()=>t.classList.remove('show'),2200);
+}
+</script>
+</body>
+</html>
